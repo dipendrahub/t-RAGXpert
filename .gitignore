@@ -1,0 +1,5 @@
+*.json
+*.csv
+*.ttl
+*.err
+*.out
