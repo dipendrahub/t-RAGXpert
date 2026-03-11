@@ -1,7 +1,6 @@
 """
 This file is to get details about the dataset. 
 The task is to figure out how many time slices we can divide the corpus into.
-Also, can we divide in such a way for all the authors
 """
 
 """
@@ -106,265 +105,6 @@ Covers:
 
 #########################################################################################################
 
-"""
-Temporal Analysis Script
-Computes:
-  1. Distribution of Career Span
-  2. Distribution of First Publication Year
-  3. Distribution of Last Publication Year
-  4. Recency Ratio Distribution
-  5. Publications per 5-Year Slice per Author
-  6. Slice Stability Conditions (A, B, C)
-  7. Emerging Expert Representativeness
-"""
-
-import pandas as pd
-import ast
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from collections import defaultdict
-
-# ── Load data ──────────────────────────────────────────────────────────────────
-authors_df = pd.read_csv("~/repo/Expert-Finding/papers_and_authors/authors.csv")
-papers_df  = pd.read_csv("~/repo/KG-Method/test_output_df_with_hierarchical_topics.csv", encoding="latin1", low_memory=False)
-papers_df["year"] = pd.to_numeric(papers_df["year"], errors="coerce")
-
-# DATASET_END_YEAR = int(papers_df["year"].max())
-# RECENCY_WINDOW   = 3   # years for recency ratio
-# SLICE_SIZE       = 3   # years per temporal slice
-
-# print("=" * 60)
-# print(f"Dataset end year : {DATASET_END_YEAR}")
-# print(f"Recency window   : {RECENCY_WINDOW} years")
-# print(f"Slice size       : {SLICE_SIZE} years")
-# print("=" * 60)
-
-# # ── Build author → paper years lookup ─────────────────────────────────────────
-# # Parse the author list from papers
-# author_years = defaultdict(list)   # author_id -> [year, year, ...]
-
-# for _, row in papers_df.iterrows():
-#     year = row["year"]
-#     if pd.isna(year):
-#         continue
-#     year = int(year)
-#     try:
-#         authors = ast.literal_eval(row["authors"])
-#     except Exception:
-#         continue
-#     for a in authors:
-#         aid = str(a.get("id", "")).strip()
-#         if aid:
-#             author_years[aid].append(year)
-
-# # Build per-author stats dataframe
-# records = []
-# for _, row in authors_df.iterrows():
-#     aid = str(row["id"])
-#     years = sorted(author_years.get(aid, []))
-
-#     if not years:
-#         # Fall back to n_pubs only — no year info available
-#         first, last, span = np.nan, np.nan, np.nan
-#         recency_ratio = np.nan
-#         avg_pubs_per_slice = np.nan
-#         n_slices = np.nan
-#     else:
-#         first = min(years)
-#         last  = max(years)
-#         span  = last - first
-
-#         # Recency ratio
-#         recent_count = sum(1 for y in years if y >= DATASET_END_YEAR - RECENCY_WINDOW)
-#         recency_ratio = recent_count / len(years)
-
-#         # Publications per 5-year slice
-#         slice_start = (first // SLICE_SIZE) * SLICE_SIZE
-#         slice_counts = defaultdict(int)
-#         for y in years:
-#             s = ((y - slice_start) // SLICE_SIZE) * SLICE_SIZE + slice_start
-#             slice_counts[s] += 1
-#         n_slices = len(slice_counts)
-#         avg_pubs_per_slice = np.mean(list(slice_counts.values()))
-
-#     records.append({
-#         "id"               : aid,
-#         "n_pubs"           : row["n_pubs"],
-#         "first_year"       : first,
-#         "last_year"        : last,
-#         "career_span"      : span,
-#         "recency_ratio"    : recency_ratio,
-#         "n_slices"         : n_slices,
-#         "avg_pubs_per_slice": avg_pubs_per_slice,
-#     })
-
-# stats = pd.DataFrame(records)
-# valid = stats.dropna(subset=["career_span"])   # authors with year data
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 1. CAREER SPAN
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n1. CAREER SPAN")
-# print("-" * 40)
-# span = valid["career_span"]
-# print(f"  Median span          : {span.median():.1f} years")
-# print(f"  Mean span            : {span.mean():.1f} years")
-# print(f"  % span  < 5 years    : {(span < 5).mean()*100:.1f}%")
-# print(f"  % span  5–10 years   : {((span >= 5) & (span <= 10)).mean()*100:.1f}%")
-# print(f"  % span 11–20 years   : {((span > 10) & (span <= 20)).mean()*100:.1f}%")
-# print(f"  % span > 20 years    : {(span > 20).mean()*100:.1f}%")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 2. FIRST PUBLICATION YEAR
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n2. FIRST PUBLICATION YEAR")
-# print("-" * 40)
-# fy = valid["first_year"]
-# print(f"  Min first year   : {int(fy.min())}")
-# print(f"  Max first year   : {int(fy.max())}")
-# print(f"  Median           : {fy.median():.0f}")
-# print(f"  % first year ≥ 2000 : {(fy >= 2000).mean()*100:.1f}%")
-# print(f"  % first year ≥ 2010 : {(fy >= 2010).mean()*100:.1f}%")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 3. LAST PUBLICATION YEAR
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n3. LAST PUBLICATION YEAR")
-# print("-" * 40)
-# ly = valid["last_year"]
-# cutoff = DATASET_END_YEAR - 10
-# print(f"  Min last year    : {int(ly.min())}")
-# print(f"  Max last year    : {int(ly.max())}")
-# print(f"  Median           : {ly.median():.0f}")
-# print(f"  % last year < {cutoff}   : {(ly < cutoff).mean()*100:.1f}%  ← potentially inactive")
-# print(f"  % last year ≥ {DATASET_END_YEAR - 3} : {(ly >= DATASET_END_YEAR - 3).mean()*100:.1f}%  ← recently active")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 4. RECENCY RATIO
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n4. RECENCY RATIO  (pubs in last 5yr / total pubs)")
-# print("-" * 40)
-# rr = valid["recency_ratio"].dropna()
-# print(f"  Median recency ratio : {rr.median():.3f}")
-# print(f"  Mean recency ratio   : {rr.mean():.3f}")
-# print(f"  % ratio near 0   (< 0.1)  : {(rr < 0.1).mean()*100:.1f}%  ← mostly historical")
-# print(f"  % ratio mid      (0.1–0.5): {((rr >= 0.1) & (rr <= 0.5)).mean()*100:.1f}%  ← stable active")
-# print(f"  % ratio high     (> 0.5)  : {(rr > 0.5).mean()*100:.1f}%  ← mostly recent / emerging")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 5. PUBLICATIONS PER 5-YEAR SLICE
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n5. PUBLICATIONS PER 5-YEAR SLICE")
-# print("-" * 40)
-# aps = valid["avg_pubs_per_slice"].dropna()
-# print(f"  Median avg pubs/slice : {aps.median():.2f}")
-# print(f"  Mean avg pubs/slice   : {aps.mean():.2f}")
-# print(f"  % authors avg < 2/slice  : {(aps < 2).mean()*100:.1f}%  ← unstable for topic modeling")
-# print(f"  % authors avg 2–5/slice  : {((aps >= 2) & (aps <= 5)).mean()*100:.1f}%  ← acceptable")
-# print(f"  % authors avg > 5/slice  : {(aps > 5).mean()*100:.1f}%  ← well-represented")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 6. SLICE STABILITY CONDITIONS
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n6. SLICE STABILITY CONDITIONS")
-# print("-" * 40)
-# ns = valid["n_slices"].dropna()
-# cond_a = (ns >= 2).mean() * 100
-# cond_b = (aps >= 2).mean() * 100
-# # Condition C: emerging authors (short career) not artificially split
-# emerging_mask = valid["career_span"] <= SLICE_SIZE
-# cond_c_ok = (valid.loc[emerging_mask, "n_slices"] == 1).mean() * 100
-
-# print(f"  Condition A — % authors in ≥2 slices        : {cond_a:.1f}%  (want > 50%)")
-# print(f"  Condition B — % authors avg ≥2 pubs/slice   : {cond_b:.1f}%  (want > 50%)")
-# print(f"  Condition C — % emerging in exactly 1 slice : {cond_c_ok:.1f}%  (want > 70%)")
-
-# if cond_a >= 50 and cond_b >= 50:
-#     print("  ✅ 5-year slicing appears STABLE for this dataset")
-# else:
-#     print("  ⚠️  Consider 3-year slicing — 5-year slices may be too coarse")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # 7. EMERGING EXPERT REPRESENTATIVENESS
-# # ══════════════════════════════════════════════════════════════════════════════
-# print("\n7. EMERGING EXPERT REPRESENTATIVENESS")
-# print("-" * 40)
-# recent_threshold = DATASET_END_YEAR - 5
-# emerging = valid[
-#     (valid["first_year"] >= recent_threshold) |
-#     (valid["recency_ratio"] > 0.7)
-# ]
-# print(f"  Total authors with year data  : {len(valid):,}")
-# print(f"  Emerging candidates (recent first_year OR high recency) : {len(emerging):,}  ({len(emerging)/len(valid)*100:.1f}%)")
-# print(f"  Median career span (emerging) : {emerging['career_span'].median():.1f} years")
-# print(f"  Median recency ratio (emerging): {emerging['recency_ratio'].median():.3f}")
-
-# if len(emerging) / len(valid) >= 0.1:
-#     print("  ✅ Sufficient emerging expert signal in dataset")
-# else:
-#     print("  ⚠️  Low emerging expert count — consider widening definition")
-
-# # ══════════════════════════════════════════════════════════════════════════════
-# # PLOTS
-# # ══════════════════════════════════════════════════════════════════════════════
-# fig = plt.figure(figsize=(18, 12))
-# gs  = gridspec.GridSpec(2, 3, figure=fig, hspace=0.4, wspace=0.35)
-# fig.suptitle("Temporal Analysis of Author Dataset", fontsize=15, fontweight="bold")
-
-# COLOR = ["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B2", "#937860"]
-
-# def hplot(ax, data, title, xlabel, color, bins=30, vline=None):
-#     ax.hist(data.dropna(), bins=bins, color=color, edgecolor="white")
-#     ax.set_title(title, fontsize=11)
-#     ax.set_xlabel(xlabel)
-#     ax.set_ylabel("Authors")
-#     ax.grid(axis="y", linestyle="--", alpha=0.4)
-#     if vline is not None:
-#         ax.axvline(vline, color="red", linestyle="--", linewidth=1.5,
-#                    label=f"Median={vline:.1f}")
-#         ax.legend(fontsize=9)
-
-# # 1 — Career span
-# hplot(fig.add_subplot(gs[0, 0]), span, "1. Career Span", "Years", COLOR[0],
-#       bins=40, vline=span.median())
-
-# # 2 — First pub year
-# hplot(fig.add_subplot(gs[0, 1]), fy, "2. First Publication Year", "Year", COLOR[1],
-#       bins=30, vline=fy.median())
-
-# # 3 — Last pub year
-# hplot(fig.add_subplot(gs[0, 2]), ly, "3. Last Publication Year", "Year", COLOR[2],
-#       bins=30, vline=ly.median())
-
-# # 4 — Recency ratio
-# ax4 = fig.add_subplot(gs[1, 0])
-# ax4.hist(rr, bins=20, color=COLOR[3], edgecolor="white")
-# ax4.axvline(rr.median(), color="red", linestyle="--", linewidth=1.5,
-#             label=f"Median={rr.median():.2f}")
-# ax4.set_title("4. Recency Ratio", fontsize=11)
-# ax4.set_xlabel("Ratio (recent pubs / total)")
-# ax4.set_ylabel("Authors")
-# ax4.legend(fontsize=9)
-# ax4.grid(axis="y", linestyle="--", alpha=0.4)
-
-# # 5 — Avg pubs per slice
-# hplot(fig.add_subplot(gs[1, 1]), aps, "5. Avg Pubs per 5-Year Slice",
-#       "Avg Publications", COLOR[4], bins=30, vline=aps.median())
-
-# # 6 — Number of slices per author
-# ax6 = fig.add_subplot(gs[1, 2])
-# ns.clip(upper=15).hist(ax=ax6, bins=15, color=COLOR[5], edgecolor="white")
-# ax6.axvline(2, color="red", linestyle="--", linewidth=1.5, label="Min stable (2)")
-# ax6.set_title("6. Number of Slices per Author\n(capped at 15)", fontsize=11)
-# ax6.set_xlabel("Slices")
-# ax6.set_ylabel("Authors")
-# ax6.legend(fontsize=9)
-# ax6.grid(axis="y", linestyle="--", alpha=0.4)
-
-# plt.savefig("temporal_analysis.png", dpi=150, bbox_inches="tight")
-# print("\nPlot saved → temporal_analysis_3years.png")
-# plt.show()
 
 """
 Temporal Analysis Script
@@ -389,7 +129,7 @@ print(f"Recency window   : {RECENCY_WINDOW} years")
 print(f"Slice size       : {SLICE_SIZE} years")
 print("=" * 60)
 
-# ── Build author → paper years lookup ─────────────────────────────────────────
+# Build author → paper years lookup 
 # Parse the author list from papers
 author_years = defaultdict(list)   # author_id -> [year, year, ...]
 
@@ -451,9 +191,7 @@ for _, row in authors_df.iterrows():
 stats = pd.DataFrame(records)
 valid = stats.dropna(subset=["career_span"])   # authors with year data
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 1. CAREER SPAN
-# ══════════════════════════════════════════════════════════════════════════════
+# CAREER SPAN
 print("\n1. CAREER SPAN")
 print("-" * 40)
 span = valid["career_span"]
@@ -464,9 +202,8 @@ print(f"  % span  5–10 years   : {((span >= 5) & (span <= 10)).mean()*100:.1f}
 print(f"  % span 11–20 years   : {((span > 10) & (span <= 20)).mean()*100:.1f}%")
 print(f"  % span > 20 years    : {(span > 20).mean()*100:.1f}%")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 2. FIRST PUBLICATION YEAR
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  FIRST PUBLICATION YEAR
 print("\n2. FIRST PUBLICATION YEAR")
 print("-" * 40)
 fy = valid["first_year"]
@@ -476,9 +213,7 @@ print(f"  Median           : {fy.median():.0f}")
 print(f"  % first year ≥ 2000 : {(fy >= 2000).mean()*100:.1f}%")
 print(f"  % first year ≥ 2010 : {(fy >= 2010).mean()*100:.1f}%")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 3. LAST PUBLICATION YEAR
-# ══════════════════════════════════════════════════════════════════════════════
+# LAST PUBLICATION YEAR
 print("\n3. LAST PUBLICATION YEAR")
 print("-" * 40)
 ly = valid["last_year"]
@@ -489,9 +224,7 @@ print(f"  Median           : {ly.median():.0f}")
 print(f"  % last year < {cutoff}   : {(ly < cutoff).mean()*100:.1f}%  ← potentially inactive")
 print(f"  % last year ≥ {DATASET_END_YEAR - 3} : {(ly >= DATASET_END_YEAR - 3).mean()*100:.1f}%  ← recently active")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 4. RECENCY RATIO
-# ══════════════════════════════════════════════════════════════════════════════
+# RECENCY RATIO
 print("\n4. RECENCY RATIO  (pubs in last 5yr / total pubs)")
 print("-" * 40)
 rr = valid["recency_ratio"].dropna()
@@ -501,9 +234,7 @@ print(f"  % ratio near 0   (< 0.1)  : {(rr < 0.1).mean()*100:.1f}%  ← mostly h
 print(f"  % ratio mid      (0.1–0.5): {((rr >= 0.1) & (rr <= 0.5)).mean()*100:.1f}%  ← stable active")
 print(f"  % ratio high     (> 0.5)  : {(rr > 0.5).mean()*100:.1f}%  ← mostly recent / emerging")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 5. PUBLICATIONS PER 5-YEAR SLICE
-# ══════════════════════════════════════════════════════════════════════════════
+# PUBLICATIONS PER 5-YEAR SLICE
 print("\n5. PUBLICATIONS PER 5-YEAR SLICE")
 print("-" * 40)
 aps = valid["avg_pubs_per_slice"].dropna()
@@ -513,9 +244,7 @@ print(f"  % authors avg < 2/slice  : {(aps < 2).mean()*100:.1f}%  ← unstable f
 print(f"  % authors avg 2–5/slice  : {((aps >= 2) & (aps <= 5)).mean()*100:.1f}%  ← acceptable")
 print(f"  % authors avg > 5/slice  : {(aps > 5).mean()*100:.1f}%  ← well-represented")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 6. SLICE STABILITY CONDITIONS
-# ══════════════════════════════════════════════════════════════════════════════
+#SLICE STABILITY CONDITIONS
 print("\n6. SLICE STABILITY CONDITIONS")
 print("-" * 40)
 ns = valid["n_slices"].dropna()
@@ -534,9 +263,7 @@ if cond_a >= 50 and cond_b >= 50:
 else:
     print("  ⚠️  Consider 3-year slicing — 5-year slices may be too coarse")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 7. EMERGING EXPERT REPRESENTATIVENESS
-# ══════════════════════════════════════════════════════════════════════════════
+# EMERGING EXPERT REPRESENTATIVENESS
 print("\n7. EMERGING EXPERT REPRESENTATIVENESS")
 print("-" * 40)
 recent_threshold = DATASET_END_YEAR - 5
@@ -554,9 +281,7 @@ if len(emerging) / len(valid) >= 0.1:
 else:
     print("  ⚠️  Low emerging expert count — consider widening definition")
 
-# ══════════════════════════════════════════════════════════════════════════════
 # PLOTS
-# ══════════════════════════════════════════════════════════════════════════════
 fig = plt.figure(figsize=(18, 12))
 gs  = gridspec.GridSpec(2, 3, figure=fig, hspace=0.4, wspace=0.35)
 fig.suptitle("", fontsize=30, fontweight="bold")
@@ -620,9 +345,8 @@ plt.savefig("temporal_analysis_3yr1.png", dpi=300, bbox_inches="tight")
 print("\nPlot saved → temporal_analysis_3yr.png")
 plt.show()
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # 8. CORE TRAJECTORY POPULATION (Temporal Eligible Authors)
-# ══════════════════════════════════════════════════════════════════════════════
 print("\n8. CORE TRAJECTORY POPULATION  (span ≥ 6 AND pubs ≥ 8)")
 print("-" * 40)
 
