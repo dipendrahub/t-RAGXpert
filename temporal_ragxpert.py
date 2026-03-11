@@ -48,12 +48,7 @@ nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 
 # ── Load Upgraded7 KG with role scores (once at startup) ──────────────────────
-# This KG is the single source of truth for:
-#   - Author metrics (span, pubs, citations, active years)
-#   - Authorship positions (pct_first, pct_middle, pct_last)
-#   - Topic assignments (1st, 2nd, 3rd order)
-#   - Temporal signals
-#   - Role state (emerging / collaborating / supervising + probabilities)
+
 print("Loading Upgraded KG with role scores...")
 kg_with_roles = Graph()
 kg_with_roles.parse(
@@ -240,7 +235,7 @@ def main():
     time_to_load_authors_end = time.time()
     print(f"Time taken to load authors data: {time_to_load_authors_end - time_to_load_authors_start} seconds")
 
-    # ── KG path (Upgraded7 used for both RAG context and role scores) ──────────
+    #KG path
     rdf_file = "Upgraded7_Knowledge_graph_with_hierarchical_topics_full_dataset.ttl"
 
     # ── Metric accumulators ────────────────────────────────────────────────────
@@ -250,7 +245,7 @@ def main():
     mp10_scores           = []
     ndcg5_scores          = []
     ndcg10_scores         = []
-    role_diversity_scores = []   # ← NEW: role diversity metric
+    role_diversity_scores = []   
 
     prompt_keywords = [['cluster analysis'], ['Bayesian statistics'], ['world wide web'], ['Novelty detection'],
     ['Image segmentation'], ['kernel density estimation'], ['gibbs sampling'], ['semantic grid'],
@@ -377,7 +372,7 @@ def main():
         mp10_scores.append(float(results['MP@5']))
         ndcg5_scores.append(float(results['NDCG@10']))
         ndcg10_scores.append(float(results['NDCG@5']))
-        role_diversity_scores.append(diversity_score)   # ← NEW
+        role_diversity_scores.append(diversity_score)   
 
     # ── Final averages ─────────────────────────────────────────────────────────
     print("Average MAP@10:",             np.mean(map10_scores))
@@ -386,7 +381,7 @@ def main():
     print("Average MP@5:",               np.mean(mp5_scores))
     print("Average NDCG@10:",            np.mean(ndcg10_scores))
     print("Average NDCG@5:",             np.mean(ndcg5_scores))
-    print("Average Role Diversity@10:",  np.mean(role_diversity_scores))   # ← NEW
+    print("Average Role Diversity@10:",  np.mean(role_diversity_scores))   
 
     end_time = time.time()
     print(f"Total Time taken: {end_time - time1_start} seconds")
