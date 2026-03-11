@@ -1,4 +1,4 @@
-# t-RAGXpert: Temporal and Role-Aware Expert Finding
+# t-RAGXpert: Career-aware Temporal Modeling for Unbiased Expert Finding
 
 A knowledge-graph-based pipeline for academic expert finding that models expertise as a temporally evolving, role-aware phenomenon. The system combines a scholarly knowledge graph (6.75M RDF triples), temporal expertise representations, dynamic career-role inference, and LLM-based reranking to retrieve and explain ranked expert recommendations.
 
